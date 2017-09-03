@@ -22,7 +22,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\GithubInstall whereInstallId($value)
  */
 class GithubInstall extends Model {
-  protected $fillable = ['install_id', 'access_token', 'access_token_expiry'];
+  protected $fillable = ['install_id', 'access_token', 'access_token_expiry', 'org_name'];
 
   public function getAccessTokenAttribute($value) {
     return $value === null ? null : decrypt($value);
