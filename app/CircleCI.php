@@ -3,6 +3,7 @@
 namespace App;
 
 // TODO: Test CircleCI 2.0
+// TODO: Generalize this
 
 use App\Models\Build;
 use App\Models\BuildArtifact;
@@ -103,9 +104,8 @@ abstract class CircleCI {
     }
 
     foreach ($artifacts as $artifact) {
-      // TODO: generalize name
       $filename = basename($artifact->path);
-      $artifact_names[$artifact->path] = $filename;
+      $artifact_names[$artifact->path] = ArtifactUtils::generalizeName($filename);
       if (!array_key_exists($filename, $project_artifact_ids)) {
         // This is the first time we've seen this artifact!
         $new_project_artifacts[] = new ProjectArtifact([
@@ -125,7 +125,6 @@ abstract class CircleCI {
     foreach ($artifacts as $artifact) {
       $filename = basename($artifact->path);
 
-      // TODO: generalize name
       BuildArtifact::updateOrCreate(
         [
           'build_id' => $build->id,
@@ -171,7 +170,7 @@ abstract class CircleCI {
         foreach ($file_handles as $file_handle) {
           fclose($file_handle);
         }
-      } catch (Exception $e) {
+      } catch (\Exception $e) {
         // Could be locked or something... Just ignore it.
       }
       FilesystemUtils::recursiveRmDir($dir);
