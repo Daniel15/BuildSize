@@ -32,6 +32,6 @@ class GithubAuthController extends Controller {
       ]
     );
     Auth::login($auth_user, false);
-    return redirect()->action('DashboardController');
+    return redirect()->intended(action('DashboardController'));
   }
 }
