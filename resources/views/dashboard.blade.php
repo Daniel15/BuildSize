@@ -14,7 +14,13 @@
   </p>
 
   @foreach ($installs as $install)
-    <h3><a href="{{ $install['html_url'] }}">{{ $install['account']['login'] }}</a></h3>
+    <h3 style="display: inline; margin-right: 0.2em">
+      {{ $install['account']['login'] }}
+    </h3>
+    @if (count($projects->get($install['account']['login'], [])) > 0)
+      <a href="{{ action('SetupController@index') }}?installation_id={{ $install['id'] }}">Get Started</a> &bull;
+      <a href="{{ $install['html_url'] }}">Manage</a>
+    @endif
     <ul>
       @forelse ($projects->get($install['account']['login'], []) as $project)
         <li>
