@@ -17,13 +17,7 @@ class CreateGithubInstallsTable extends Migration {
       $table->integer('install_id')->unsigned()->unique();
       $table->string('access_token', 1000)->nullable();
       $table->dateTime('access_token_expiry')->nullable();
-    });
-
-    Schema::table('projects', function (Blueprint $table) {
-      $table->integer('github_install_id')->nullable()->unsigned();
-      $table->foreign('github_install_id')
-        ->references('id')->on('github_installs')
-        ->onDelete('set null');
+      $table->string('org_name')->unique();
     });
   }
 
@@ -34,8 +28,5 @@ class CreateGithubInstallsTable extends Migration {
    */
   public function down() {
     Schema::dropIfExists('github_installs');
-    Schema::table('projects', function (Blueprint $table) {
-      $table->dropColumn('github_install_id');
-    });
   }
 }

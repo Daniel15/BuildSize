@@ -26,21 +26,27 @@ class GithubController extends Controller {
   }
 
   // https://developer.github.com/v3/activity/events/types/#installationevent
-  public function handleInstallation(Request $request) {
-    $install = GithubInstall::firstOrCreate([
-      'install_id' => $request->input('installation.id'),
-    ]);
+  /** @noinspection PhpUnusedPrivateMethodInspection */
+  private function handleInstallation(Request $request) {
+    $org_name = $request->input('installation.account.login');
+    $install = GithubInstall::firstOrCreate(
+      [
+        'org_name' => $org_name,
+      ],
+      [
+        'install_id' => $request->input('installation.id'),
+      ]
+    );
 
     switch ($request->input('action')) {
       case 'created':
         // Add every repo that the app was installed to
-        $org_name = $request->input('installation.account.login');
         $repos = $request->input('repositories') ?? [];
-        $this->addRepositories($org_name, $install, $repos);
+        $this->addRepositories($org_name, $repos);
         break;
 
       case 'deleted':
-        Project::where('github_install_id', $install->id)
+        Project::where('org_name', $org_name)
           ->update(['active' => false]);
         $install->delete();
         break;
@@ -48,16 +54,13 @@ class GithubController extends Controller {
   }
 
   // https://developer.github.com/v3/activity/events/types/#installationrepositoriesevent
-  public function handleInstallationRepositories(Request $request) {
-    $install = GithubInstall::firstOrCreate([
-      'install_id' => $request->input('installation.id'),
-    ]);
 
+  /** @noinspection PhpUnusedPrivateMethodInspection */
+  private function handleInstallationRepositories(Request $request) {
     // Add new repositories, and remove old ones
     $org_name = $request->input('installation.account.login');
     $this->addRepositories(
       $org_name,
-      $install,
       $request->input('repositories_added')
     );
 
@@ -67,12 +70,13 @@ class GithubController extends Controller {
       $removed_repo_names[] = $repo['name'];
     }
 
-    // Deactive any removed repositories
+    // Deactivate any removed repositories
     Project::whereIn('repo_name', $removed_repo_names)
       ->where('org_name', $org_name)
       ->update(['active' => false]);
   }
 
+  /** @noinspection PhpUnusedPrivateMethodInspection */
   private function handleStatus(Request $request) {
     switch ($request->input('context')) {
       case 'ci/circleci':
@@ -84,7 +88,7 @@ class GithubController extends Controller {
     }
   }
 
-  private function addRepositories(string $org_name, GitHubInstall $install, array $repos) {
+  private function addRepositories(string $org_name, array $repos) {
     foreach ($repos as $repo) {
       Project::updateOrCreate(
         [
@@ -94,7 +98,6 @@ class GithubController extends Controller {
         ],
         [
           'active' => true,
-          'github_install_id' => $install->id,
         ]
       );
     }
