@@ -1,41 +1,45 @@
 <?php
 
-namespace App\Http\Controllers\Webhook;
+namespace App;
 
-use App\Http\Controllers\Controller;
+// TODO: Test CircleCI 2.0
+
 use App\Models\Build;
 use App\Models\BuildArtifact;
 use App\Models\Project;
 use App\Models\ProjectArtifact;
 use GuzzleHttp\Client;
 use GuzzleHttp\Promise;
-use Illuminate\Http\Request;
 
-class CircleCIController extends Controller {
-  public function __invoke(Request $request) {
+abstract class CircleCI {
+  public static function analyzeBuildFromURL(string $url) {
+    $parts = static::parseBuildURL($url);
+    static::analyzeBuild($parts['owner'], $parts['repo'], $parts['build']);
+  }
 
+  public static function analyzeBuild(string $username, string $reponame, int $build_num) {
     // Retrieve this build from CircleCI's API to verify that it's legit
     // TODO: Parallelize these calls
-    $build = $this->call(
+    $build = static::call(
       'project/github/%s/%s/%s',
-      $request->input('payload.username'),
-      $request->input('payload.reponame'),
-      $request->input('payload.build_num')
+      $username,
+      $reponame,
+      $build_num
     );
 
-    $artifacts = $this->call(
+    $artifacts = static::call(
       'project/github/%s/%s/%s/artifacts',
-      $request->input('payload.username'),
-      $request->input('payload.reponame'),
-      $request->input('payload.build_num')
+      $username,
+      $reponame,
+      $build_num
     );
-    $sizes = $this->getArtifactSizes($artifacts);
+    $sizes = static::getArtifactSizes($artifacts);
 
     $last_commit = $build->all_commit_details[count($build->all_commit_details) - 1];
 
     if (!empty($build->branch)) {
       // Build is on a branch, so save information for that branch
-      $this->saveArtifactsForProjectBuild($build, $artifacts, $sizes, $last_commit, [
+      static::saveArtifactsForProjectBuild($build, $artifacts, $sizes, $last_commit, [
         'org_name' => $build->username,
         'repo_name' => $build->reponame,
         'identifier' => $build->branch . '/' . $last_commit->commit,
@@ -46,9 +50,9 @@ class CircleCIController extends Controller {
     if (count($build->pull_requests) > 0) {
       // Build is part of a PR, so save for all PRs too
       foreach ($build->pull_requests as $pull_request) {
-        $pull_request_url = $this->parsePullRequestURL($pull_request->url);
+        $pull_request_url = GithubUtils::parsePullRequestURL($pull_request->url);
         if ($pull_request_url !== null) {
-          $this->saveArtifactsForProjectBuild($build, $artifacts, $sizes, $last_commit, [
+          static::saveArtifactsForProjectBuild($build, $artifacts, $sizes, $last_commit, [
             'org_name' => $pull_request_url['username'],
             'repo_name' => $pull_request_url['reponame'],
             'identifier' => 'pr/' . $pull_request_url['pr_number'],
@@ -61,20 +65,7 @@ class CircleCIController extends Controller {
     }
   }
 
-  private function parsePullRequestURL(string $url): array {
-    $path = explode('/', parse_url($url, PHP_URL_PATH));
-    if ($path[3] !== 'pull') {
-      return null;
-    }
-
-    return [
-      'username' => $path[1],
-      'reponame' => $path[2],
-      'pr_number' => (int)$path[4],
-    ];
-  }
-
-  private function saveArtifactsForProjectBuild(
+  private static function saveArtifactsForProjectBuild(
     $build,
     $artifacts,
     $sizes,
@@ -149,8 +140,8 @@ class CircleCIController extends Controller {
     }
   }
 
-  private function getArtifactSizes(array $artifacts): array {
-    $dir = static::createTempDir('buildartifacts');
+  private static function getArtifactSizes(array $artifacts): array {
+    $dir = FilesystemUtils::createTempDir('buildartifacts');
 
     // Download the artifacts in parallel
     $artifact_client = new Client();
@@ -183,11 +174,11 @@ class CircleCIController extends Controller {
       } catch (Exception $e) {
         // Could be locked or something... Just ignore it.
       }
-      static::recursiveRmDir($dir);
+      FilesystemUtils::recursiveRmDir($dir);
     }
   }
 
-  public function call(string $uri, ...$uri_args) {
+  public static function call(string $uri, ...$uri_args) {
     // TODO: Use API key?
     $client = new Client([
       'base_uri' => 'https://circleci.com/api/v1.1/',
@@ -201,27 +192,20 @@ class CircleCIController extends Controller {
   }
 
   /**
-   * Creates a temporary directory with a unique name.
+   * Parses the owner, repo and build number from a CircleCI build URL.
+   * @param string $url
+   * @return array
    */
-  public static function createTempDir(string $prefix) {
-    $tempdir = tempnam(sys_get_temp_dir(), $prefix);
-    // tempnam() creates a temp *file*, but we want a temp *directory*.
-    unlink($tempdir);
-    mkdir($tempdir);
-    return $tempdir.'/';
-  }
-
-  private static function recursiveRmDir($dir) {
-    $iterator = new \RecursiveIteratorIterator(
-      new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
-      \RecursiveIteratorIterator::CHILD_FIRST
-    );
-    foreach ($iterator as $filename => $fileInfo) {
-      if ($fileInfo->isDir()) {
-        rmdir($filename);
-      } else {
-        unlink($filename);
-      }
+  public static function parseBuildURL(string $url) {
+    $path = parse_url($url, PHP_URL_PATH);
+    $parts = explode('/', $path);
+    if (count($parts) !== 5 || $parts[1] !== 'gh') {
+      throw new \InvalidArgumentException('Unexpected CircleCI URL format: ' . $path);
     }
+    return [
+      'owner' => $parts[2],
+      'repo' => $parts[3],
+      'build' => (int)$parts[4],
+    ];
   }
 }

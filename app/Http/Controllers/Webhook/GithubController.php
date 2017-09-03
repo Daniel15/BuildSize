@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Webhook;
 
+use App\CircleCI;
 use App\Http\Controllers\Controller;
 use App\Models\GithubInstall;
 use App\Models\Project;
@@ -70,6 +71,17 @@ class GithubController extends Controller {
     Project::whereIn('repo_name', $removed_repo_names)
       ->where('org_name', $org_name)
       ->update(['active' => false]);
+  }
+
+  private function handleStatus(Request $request) {
+    switch ($request->input('context')) {
+      case 'ci/circleci':
+        CircleCI::analyzeBuildFromURL($request->input('target_url'));
+        break;
+
+      default:
+        return 'Unknown context "' . $request->input('context') . '"';
+    }
   }
 
   private function addRepositories(string $org_name, GitHubInstall $install, array $repos) {
