@@ -16,7 +16,6 @@ class GithubAuthController extends Controller {
   }
 
   public function login() {
-    // TODO: Work out why this shows the auth UI every single time
     return Socialite::driver('github')->redirect();
   }
 
