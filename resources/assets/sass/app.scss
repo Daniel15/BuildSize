@@ -9,6 +9,20 @@ $navbar-padding: 22px;
 
 .jumbotron {
   margin-top: -$navbar-padding;
+
+  .hero {
+    // Display hero image next to text if there's enough space
+    @include media-breakpoint-up('lg') {
+      display: flex;
+      justify-content: space-between;
+    }
+    @include media-breakpoint-down('md') {
+      .hero-image {
+        height: auto;
+        max-width: 100%;
+      }
+    }
+  }
 }
 
 // Sticky footer

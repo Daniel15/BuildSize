@@ -2,16 +2,19 @@
 
 @section('body')
   <div class="jumbotron">
-    <div class="container">
-      <h1 class="display-3">{{ config('app.name') }}</h1>
-      <p>
-        Automatically track the size of your build artifacts
-      </p>
-      <p>
-        <a class="btn btn-primary btn-lg" href="{{ \App\UrlHelper::getGithubAppURL() }}" role="button">
-          Get Started &raquo;
-        </a>
-      </p>
+    <div class="container hero">
+      <div>
+        <h1 class="display-3">{{ config('app.name') }}</h1>
+        <p>
+          Automatically track the size of your build artifacts
+        </p>
+        <p>
+          <a class="btn btn-primary btn-lg" href="{{ \App\UrlHelper::getGithubAppURL() }}" role="button">
+            Get Started &raquo;
+          </a>
+        </p>
+      </div>
+      <img class="hero-image" src="/images/hero.png" width="513" height="152" alt="Screenshot of {{ config('app.name') }}" />
     </div>
   </div>
 
@@ -34,10 +37,17 @@
         </p>
       </div>
       <div class="col-md-4">
+        <h2>Open Source</h2>
+        <p>
+          {{ config('app.name') }} is open source, so you can do whatever you want with it. Contribute, or even run
+          your own version.
+        </p>
+      </div>
+      <!--<div class="col-md-4">
         <h2>Historical Data</h2>
         <p>View how the size of your build has changed over time</p>
         <p class="text-muted">Coming soon</p>
-      </div>
+      </div>-->
     </div>
   </div>
 @endsection
