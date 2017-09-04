@@ -143,8 +143,8 @@ abstract class CircleCI {
     }
 
     foreach ($artifacts as $artifact) {
-      $filename = basename($artifact->path);
-      $artifact_names[$artifact->path] = ArtifactUtils::generalizeName($filename);
+      $filename = ArtifactUtils::generalizeName(basename($artifact->path));
+      $artifact_names[$artifact->path] = $filename;
       if (!array_key_exists($filename, $project_artifact_ids)) {
         // This is the first time we've seen this artifact!
         $new_project_artifacts[] = new ProjectArtifact([

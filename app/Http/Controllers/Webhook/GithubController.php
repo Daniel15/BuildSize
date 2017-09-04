@@ -79,17 +79,15 @@ class GithubController extends Controller {
 
   /** @noinspection PhpUnusedPrivateMethodInspection */
   private function handleStatus(Request $request) {
-    switch ($request->input('context')) {
-      case 'ci/circleci':
-        CircleCI::analyzeBuildFromURL(
-          $request->input('target_url'),
-          $request->all()
-        );
-        break;
-
-      default:
-        return 'Unknown context "' . $request->input('context') . '"';
+    if (starts_with($request->input('context'), 'ci/circleci')) {
+      CircleCI::analyzeBuildFromURL(
+        $request->input('target_url'),
+        $request->all()
+      );
+      return 'Handled CircleCI payload';
     }
+
+    return 'Unknown context "' . $request->input('context') . '"';
   }
 
   // https://developer.github.com/v3/activity/events/types/#pushevent
