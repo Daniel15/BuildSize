@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -12,7 +13,7 @@ use Laravel\Socialite\Facades\Socialite;
  */
 class GithubAuthController extends Controller {
   public function __construct() {
-    $this->middleware('guest');
+    $this->middleware('guest')->except('logout');
   }
 
   public function login() {
@@ -33,5 +34,10 @@ class GithubAuthController extends Controller {
     );
     Auth::login($auth_user, false);
     return redirect()->intended(action('DashboardController'));
+  }
+
+  public function logout() {
+    Auth::logout();
+    return redirect('/');
   }
 }

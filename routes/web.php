@@ -9,3 +9,4 @@ Route::get('/setup/repo/{org_name}/{repo_name}', 'SetupController@showRepoInstru
 
 Route::get('/login/github', 'GithubAuthController@login')->name('login');
 Route::get('/login/github/complete', 'GithubAuthController@completeLogin');
+Route::post('/logout', 'GithubAuthController@logout')->name('logout');
