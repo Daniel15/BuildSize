@@ -5,6 +5,8 @@ namespace App;
 // TODO: Test CircleCI 2.0
 // TODO: Generalize this
 
+use App\Helpers\Format;
+use App\Models\Branch;
 use App\Models\Build;
 use App\Models\BuildArtifact;
 use App\Models\GithubInstall;
@@ -40,22 +42,6 @@ abstract class CircleCI {
 
     $sizes = static::getArtifactSizes($artifacts);
 
-    // TODO: Clean up all this handling, make it more generic and reusable
-    // TODO: Unit test all of this stuff!
-    if (count($payload['branches']) > 0) {
-      // Build is on a branch, so save information for that branch
-      foreach ($payload['branches'] as $branch) {
-        static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, [
-          'org_name' => $payload['repository']['owner']['login'],
-          'repo_name' => $payload['repository']['name'],
-          'identifier' => $branch['name'] . '/' . $payload['commit']['sha'],
-          'build_data' => [
-            'branch' => $branch['name'],
-          ],
-        ]);
-      }
-    }
-
     // See if we have a GitHub app configured for this repo
     $install_id = $payload['installation']['id'];
     $install = GithubInstall::where('install_id', $install_id)
@@ -67,11 +53,27 @@ abstract class CircleCI {
       return;
     }
 
+    $github = GithubUtils::createClientForInstall($install);
+
+    // TODO: Clean up all this handling, make it more generic and reusable
+    // TODO: Unit test all of this stuff!
+    if (count($payload['branches']) > 0) {
+      // Build is on a branch, so save information for that branch
+      foreach ($payload['branches'] as $branch) {
+        static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, $github, [
+          'org_name' => $payload['repository']['owner']['login'],
+          'repo_name' => $payload['repository']['name'],
+          'identifier' => $branch['name'] . '/' . $payload['commit']['sha'],
+          'build_data' => [
+            'branch' => $branch['name'],
+          ],
+        ]);
+      }
+    }
+
     // TODO: Work out if this is retrievable from GitHub rather than calling CircleCI's API for it
     if (count($build->pull_requests) > 0) {
       // Build is part of a PR, so save for all PRs too
-      $github = GithubUtils::createClientForInstall($install);
-
       foreach ($build->pull_requests as $pull_request) {
         $pull_request_url = GithubUtils::parsePullRequestURL($pull_request->url);
         if ($pull_request_url !== null) {
@@ -80,7 +82,7 @@ abstract class CircleCI {
             $pull_request_url['reponame'],
             $pull_request_url['pr_number']
           );
-          static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, [
+          static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, $github, [
             'org_name' => $pull_request_url['username'],
             'repo_name' => $pull_request_url['reponame'],
             'pull_request' => $pull_request_url['pr_number'],
@@ -102,6 +104,7 @@ abstract class CircleCI {
     $artifacts,
     $sizes,
     $payload,
+    \Github\Client $github,
     $metadata
   ) {
     // TODO: This should handle default_branch too
@@ -155,10 +158,11 @@ abstract class CircleCI {
       $project_artifact_ids[$artifact->name] = $artifact->id;
     }
 
+    $build_artifacts = [];
     foreach ($artifacts as $artifact) {
       $filename = basename($artifact->path);
 
-      BuildArtifact::updateOrCreate(
+      $build_artifacts[] = BuildArtifact::updateOrCreate(
         [
           'build_id' => $build->id,
           'project_artifact_id' =>
@@ -171,7 +175,50 @@ abstract class CircleCI {
       );
     }
 
-    // TODO: update status
+    $base_build = null;
+    if (!empty($metadata['build_data']['base_commit'])) {
+      // See if we have the base commit to compare against
+      $base_build = Build::where('project_id', $project->id)
+        ->where('commit', $metadata['build_data']['base_commit'])
+        ->first();
+
+      if ($base_build === null && !empty($metadata['build_data']['base_branch'])) {
+        // Don't have this exact build, so check if we have the most recent build on the same
+        // branch.
+        $latest_branch = Branch::where('org_name', $metadata['org_name'])
+          ->where('repo_name', $metadata['repo_name'])
+          ->where('branch', $metadata['build_data']['base_branch'])
+          ->first();
+        if ($latest_branch !== null) {
+          $base_build = Build::where('project_id', $project->id)
+            ->where('commit', $latest_branch->latest_commit)
+            ->first();
+        }
+      }
+    }
+
+    if ($base_build !== null) {
+      // Can compare to base
+      // TODO
+    }
+
+    $total_size = 0;
+    foreach ($build_artifacts as $artifact) {
+      $total_size += $artifact->size;
+    }
+
+    $github->repo()->statuses()->create(
+      $metadata['org_name'],
+      $metadata['repo_name'],
+      $payload['commit']['sha'],
+      [
+        'context' => config('buildsize.github.status_context_prefix') . '/total',
+        'description' => 'Build size: ' . Format::fileSize($total_size),
+        'state' => 'success',
+        'target_url' => 'http://example.com/', // TODO
+      ]
+    );
+
     // TODO: Comment if PR
   }
 

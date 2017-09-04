@@ -36,4 +36,8 @@ class Build extends Model {
     'project_id',
     'pull_request',
   ];
+
+  public function buildArtifacts() {
+    return $this->hasMany(BuildArtifact::class);
+  }
 }
