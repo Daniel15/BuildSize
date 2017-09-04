@@ -102,6 +102,14 @@ class GithubController extends Controller {
     }
     $branch = $matches['branch'];
 
+    // Ignore deletes
+    if (
+      $request->input('deleted') ||
+      $request->input('head_commit.id') === null
+    ) {
+      return;
+    }
+
     // Save the latest commit info for this branch
     Branch::updateOrCreate(
       [
