@@ -1,18 +1,24 @@
+$footer-height: 60px;
+$navbar-padding: 22px;
+
 @import "~bootstrap/scss/bootstrap";
 
 .navbar {
-  margin-bottom: 22px;
+  margin-bottom: $navbar-padding;
 }
 
-/* Sticky footer */
-$footer-height: 60px;
+.jumbotron {
+  margin-top: -$navbar-padding;
+}
+
+// Sticky footer
 html {
   min-height: 100%;
   position: relative;
 }
 
 body {
-  margin-bottom: -$footer-height;
+  margin-bottom: $footer-height + $navbar_padding;
 }
 
 .footer {
