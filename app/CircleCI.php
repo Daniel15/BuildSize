@@ -15,6 +15,7 @@ use App\Models\ProjectArtifact;
 use GuzzleHttp\Client;
 use GuzzleHttp\Promise;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 abstract class CircleCI {
   const WARN_THRESHOLD = 10000; // TODO make this configurable
@@ -176,6 +177,7 @@ abstract class CircleCI {
         ]
       );
     }
+    $build_artifacts = collect($build_artifacts)->keyBy('project_artifact_id');
 
     $base_build = null;
     if (!empty($metadata['build_data']['base_commit'])) {
@@ -205,6 +207,9 @@ abstract class CircleCI {
     $state = 'success';
 
     $old_artifacts = null;
+    $diff = null;
+    $diff_percent = null;
+    $total_old_size = null;
     if ($base_build !== null) {
       // Can compare to base
       $old_artifacts = $base_build->buildArtifacts->keyBy('project_artifact_id');
@@ -215,9 +220,9 @@ abstract class CircleCI {
       $diff = $total_old_size - $total_size;
       $diff_percent = round($diff / $total_old_size * 100.0, 2);
       if ($diff > 0) {
-        $description .= ' (decreased by ' . Format::fileSize($diff) . ' / ' . $diff_percent . '%)';
+        $description .= ' (decreased by ' . Format::fileSize($diff) . ', ' . $diff_percent . '%)';
       } else {
-        $description .= ' (increased by ' . Format::fileSize(-$diff) . ' / ' . -$diff_percent . '%)';
+        $description .= ' (increased by ' . Format::fileSize(-$diff) . ', ' . -$diff_percent . '%)';
         if ($diff < static::WARN_THRESHOLD) {
           $state = 'failure';
         }
@@ -236,7 +241,110 @@ abstract class CircleCI {
       ]
     );
 
-    // TODO: Comment if PR
+    // TODO: Make this configurable
+    if (
+      $base_build !== null &&
+      $diff !== null &&
+      $old_artifacts !== null &&
+      !empty($metadata['build_data']['pull_request'])
+    ) {
+      $file_comment_data = [];
+
+      // Add all the old artifacts
+      foreach ($old_artifacts as $old_artifact) {
+        $new_artifact = $build_artifacts->get($old_artifact->project_artifact_id);
+        $file_comment_data[] = [
+          'name' => $old_artifact->projectArtifact->name,
+          'old_size' => $old_artifact->size,
+          'new_size' => $new_artifact
+            ? $new_artifact->size
+            : null,
+        ];
+      }
+
+      // Add any new artifacts that didn't exist previously
+      foreach ($build_artifacts as $new_artifact) {
+        if ($old_artifacts->has($new_artifact->project_artifact_id)) {
+          continue;
+        }
+        $file_comment_data[] = [
+          'name' => $new_artifact->projectArtifact->name,
+          'old_size' => null,
+          'new_size' => $new_artifact->size,
+        ];
+      }
+
+      // Build the comment
+      $message = $diff > 0
+        ? ('This change will decrease the build size from ' . Format::fileSize($total_old_size) . ' to ' . Format::fileSize($total_size) . ', a decrease of ' . $diff_percent . '%')
+        : ('This change will increase the build size from ' . Format::fileSize($total_old_size) . ' to ' . Format::fileSize($total_size) . ', an increase of ' . $diff_percent . '%');
+
+      $message .= <<<EOT
+
+
+| File name | Previous Size | New Size | Change |
+| --------- | ------------- | -------- | ------ |
+
+EOT;
+      foreach ($file_comment_data as $data) {
+        $message .= '| ' . $data['name'] . ' | ';
+        $message .= ($data['old_size'] === null ? '[new file]' : Format::fileSize($data['old_size'])) . ' | ';
+        $message .= ($data['new_size'] === null ? '[deleted]' : Format::fileSize($data['new_size'])) . ' | ';
+        if ($data['old_size'] !== null && $data['new_size'] !== null) {
+          $message .= round(($data['old_size'] + $data['new_size']) / $data['old_size'], 2) . '% | ';
+        } else {
+          $message .= ' | ';
+        }
+        $message .= "\n";
+      }
+
+      // Check if a comment already exists
+      $comment_id = static::checkForExistingComment(
+        $github,
+        $metadata['org_name'],
+        $metadata['repo_name'],
+        $metadata['build_data']['pull_request']
+      );
+
+      if ($comment_id !== null) {
+        $github->issue()->comments()->update(
+          $metadata['org_name'],
+          $metadata['repo_name'],
+          $comment_id,
+          [
+            'body' => $message,
+          ]
+        );
+      } else {
+        $github->issue()->comments()->create(
+          $metadata['org_name'],
+          $metadata['repo_name'],
+          $metadata['build_data']['pull_request'],
+          [
+            'body' => $message,
+          ]
+        );
+      }
+    }
+  }
+
+  private static function checkForExistingComment(
+    \Github\Client $github,
+    string $org_name,
+    string $repo_name,
+    int $pull_request
+  ) {
+    $comments = $github->issue()->comments()->all(
+      $org_name,
+      $repo_name,
+      $pull_request
+    );
+    foreach ($comments as $comment) {
+      if (ends_with($comment['user']['html_url'], '/apps/' . env('GITHUB_APP_ALIAS'))) {
+        return $comment['id'];
+      }
+    }
+    return null;
   }
 
   private static function getArtifactSizes(array $artifacts): array {
