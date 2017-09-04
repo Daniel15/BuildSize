@@ -17,8 +17,11 @@ class CreateBuildsTable extends Migration {
       $table->integer('project_id')->unsigned();
       $table->string('identifier');
       $table->string('commit', 40);
-      $table->string('committer')->index();
+      $table->string('committer', 100)->index();
       $table->integer('pull_request')->unsigned()->nullable();
+      $table->string('base_branch', 100)->nullable();
+      $table->string('base_commit', 40)->nullable();
+      $table->string('branch', 100);
 
       $table->foreign('project_id')
         ->references('id')->on('projects')

@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Models\ProjectArtifact;
 use GuzzleHttp\Client;
 use GuzzleHttp\Promise;
+use Illuminate\Support\Facades\Log;
 
 abstract class CircleCI {
   public static function analyzeBuildFromURL(string $url, $payload) {
@@ -48,17 +49,37 @@ abstract class CircleCI {
           'org_name' => $payload['repository']['owner']['login'],
           'repo_name' => $payload['repository']['name'],
           'identifier' => $branch['name'] . '/' . $payload['commit']['sha'],
-          'build_data' => [],
+          'build_data' => [
+            'branch' => $branch['name'],
+          ],
         ]);
       }
+    }
+
+    // See if we have a GitHub app configured for this repo
+    $install_id = $payload['installation']['id'];
+    $install = GithubInstall::where('install_id', $install_id)
+      ->first();
+
+    if ($install === null) {
+      // Somehow we got a push for an installation that doesn't actually exist. wat.
+      Log::warning('Received webhook for invalid installation %s!', $install_id);
+      return;
     }
 
     // TODO: Work out if this is retrievable from GitHub rather than calling CircleCI's API for it
     if (count($build->pull_requests) > 0) {
       // Build is part of a PR, so save for all PRs too
+      $github = GithubUtils::createClientForInstall($install);
+
       foreach ($build->pull_requests as $pull_request) {
         $pull_request_url = GithubUtils::parsePullRequestURL($pull_request->url);
         if ($pull_request_url !== null) {
+          $pull_request_data = $github->pullRequest()->show(
+            $pull_request_url['username'],
+            $pull_request_url['reponame'],
+            $pull_request_url['pr_number']
+          );
           static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, [
             'org_name' => $pull_request_url['username'],
             'repo_name' => $pull_request_url['reponame'],
@@ -66,6 +87,9 @@ abstract class CircleCI {
             // TODO: saveArtifactsForProjectBuild should just infer this rather than having to explicitly pass it
             'identifier' => 'pr/' . $pull_request_url['pr_number'],
             'build_data' => [
+              'base_branch' => $pull_request_data['base']['ref'],
+              'base_commit' => $pull_request_data['base']['sha'],
+              'branch' => $pull_request_data['head']['ref'],
               'pull_request' => $pull_request_url['pr_number'],
             ],
           ]);
@@ -145,13 +169,6 @@ abstract class CircleCI {
           'size' => $sizes[$filename],
         ]
       );
-    }
-
-    // See if we have a GitHub app configured for this repo
-    $install = GithubInstall::where('install_id', $payload['installation']['id'])
-      ->first();
-    if (!$install) {
-      return;
     }
 
     // TODO: update status

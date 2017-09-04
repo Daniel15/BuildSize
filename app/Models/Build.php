@@ -26,5 +26,14 @@ use Illuminate\Database\Eloquent\Model;
  * @mixin \Eloquent
  */
 class Build extends Model {
-  protected $fillable = ['project_id', 'identifier', 'pull_request', 'commit', 'committer'];
+  protected $fillable = [
+    'base_branch',
+    'base_commit',
+    'branch',
+    'commit',
+    'committer',
+    'identifier',
+    'project_id',
+    'pull_request',
+  ];
 }
