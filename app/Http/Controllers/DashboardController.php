@@ -26,6 +26,7 @@ class DashboardController extends Controller {
 
     // Find projects in all orgs that the user has installed the
     $projects = Project::whereIn('org_name', $org_names)
+      ->where('active', true)
       ->get()
       ->groupBy(function($project) {
         return $project->org_name;
