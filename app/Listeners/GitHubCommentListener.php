@@ -109,7 +109,8 @@ class GitHubCommentListener {
       );
 
     $message .= <<<EOT
-  
+
+
 | File name | Previous Size | New Size | Change |
 | --------- | ------------- | -------- | ------ |
   

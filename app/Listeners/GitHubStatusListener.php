@@ -43,7 +43,7 @@ class GitHubStatusListener {
       $event->project->repo_name,
       $event->build->commit,
       [
-        'context' => config('buildsize.github.status_context_prefix') . '/total2',
+        'context' => config('buildsize.github.status_context_prefix') . '/total',
         'description' => $description,
         'state' => $state,
         'target_url' => 'http://example.com/2222', // TODO

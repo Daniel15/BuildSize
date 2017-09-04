@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\BuildArtifact whereSize($value)
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\BuildArtifact whereUpdatedAt($value)
  * @mixin \Eloquent
+ * @property-read \App\Models\ProjectArtifact $projectArtifact
  */
 class BuildArtifact extends Model {
   protected $fillable = ['build_id', 'project_artifact_id', 'filename', 'size'];

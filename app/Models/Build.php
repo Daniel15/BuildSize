@@ -24,6 +24,13 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\Build wherePullRequest($value)
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\Build whereUpdatedAt($value)
  * @mixin \Eloquent
+ * @property string|null $base_branch
+ * @property string|null $base_commit
+ * @property string $branch
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\BuildArtifact[] $buildArtifacts
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\Build whereBaseBranch($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\Build whereBaseCommit($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\Build whereBranch($value)
  */
 class Build extends Model {
   protected $fillable = [

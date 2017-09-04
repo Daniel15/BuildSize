@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Webhook;
 
-use App\CircleCI;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\GithubInstall;
 use App\Models\Project;
+use App\Services\Build\CircleCI;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class GithubController extends Controller {
   public function __invoke(Request $request) {
@@ -20,7 +21,7 @@ class GithubController extends Controller {
     $event_name = $request->header('X-GitHub-Event');
     $handler_name = 'handle' . studly_case($event_name);
     if (method_exists($this, $handler_name)) {
-      $this->{$handler_name}($request);
+      return $this->{$handler_name}($request);
     } else {
       return 'No handler for ' . $event_name;
     }
@@ -79,15 +80,27 @@ class GithubController extends Controller {
 
   /** @noinspection PhpUnusedPrivateMethodInspection */
   private function handleStatus(Request $request) {
-    if (starts_with($request->input('context'), 'ci/circleci')) {
-      CircleCI::analyzeBuildFromURL(
-        $request->input('target_url'),
-        $request->all()
-      );
-      return 'Handled CircleCI payload';
+    // See if we have a GitHub app configured for this repo
+    $install_id = $request->input('installation.id');
+    $install = GithubInstall::where('install_id', $install_id)
+      ->first();
+
+    if ($install === null) {
+      // Somehow we got a push for an installation that doesn't actually exist. wat.
+      Log::warning('Received webhook for invalid installation %s!', $install_id);
+      return 'Invalid installation';
     }
 
-    return 'Unknown context "' . $request->input('context') . '"';
+    $handler = null;
+    if (starts_with($request->input('context'), 'ci/circleci')) {
+      $handler = new CircleCI();
+    }
+    if ($handler === null) {
+      return 'Unknown context "' . $request->input('context') . '"';
+    }
+
+    $handler->analyzeFromGitHubPayload($install, $request->all());
+    return 'Handled status payload.';
   }
 
   // https://developer.github.com/v3/activity/events/types/#pushevent
