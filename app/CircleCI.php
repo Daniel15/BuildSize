@@ -231,7 +231,7 @@ abstract class CircleCI {
       } else {
         $description .= ' (increased by ' . Format::fileSize(-$diff) . ', ' . -$diff_percent . '%)';
         if ($diff < static::WARN_THRESHOLD) {
-          $state = 'failure';
+          //$state = 'failure';
         }
       }
     }
@@ -283,8 +283,10 @@ abstract class CircleCI {
 
       // Build the comment
       $message = $diff > 0
-        ? ('This change will decrease the build size from ' . Format::fileSize($total_old_size) . ' to ' . Format::fileSize($total_size) . ', a decrease of ' . $diff_percent . '%')
-        : ('This change will increase the build size from ' . Format::fileSize($total_old_size) . ' to ' . Format::fileSize($total_size) . ', an increase of ' . $diff_percent . '%');
+        ? ('This change will decrease the build size from ' . Format::fileSize($total_old_size) . ' to ' .
+          Format::fileSize($total_size) . ', a decrease of ' . Format::fileSize($diff) . ' (' . $diff_percent . '%)')
+        : ('This change will increase the build size from ' . Format::fileSize($total_old_size) . ' to ' .
+          Format::fileSize($total_size) . ', an increase of ' . Format::fileSize(-$diff) . ' (' . -$diff_percent . '%)');
 
       $message .= <<<EOT
 
@@ -298,7 +300,7 @@ EOT;
         $message .= ($data['old_size'] === null ? '[new file]' : Format::fileSize($data['old_size'])) . ' | ';
         $message .= ($data['new_size'] === null ? '[deleted]' : Format::fileSize($data['new_size'])) . ' | ';
         if ($data['old_size'] !== null && $data['new_size'] !== null) {
-          $message .= round(($data['old_size'] + $data['new_size']) / $data['old_size'], 2) . '% | ';
+          $message .= Format::diffFileSizeWithPercentage($data['old_size'], $data['new_size']) . ' | ';
         } else {
           $message .= ' | ';
         }
