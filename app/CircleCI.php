@@ -17,6 +17,8 @@ use GuzzleHttp\Promise;
 use Illuminate\Support\Facades\Log;
 
 abstract class CircleCI {
+  const WARN_THRESHOLD = 10000; // TODO make this configurable
+
   public static function analyzeBuildFromURL(string $url, $payload) {
     $parts = static::parseBuildURL($url);
     static::analyzeBuild($parts['owner'], $parts['repo'], $parts['build'], $payload);
@@ -192,19 +194,34 @@ abstract class CircleCI {
         if ($latest_branch !== null) {
           $base_build = Build::where('project_id', $project->id)
             ->where('commit', $latest_branch->latest_commit)
+            ->with('buildArtifacts')
             ->first();
         }
       }
     }
 
+    $total_size = array_sum($sizes);
+    $description = 'Build size: ' . Format::fileSize($total_size);
+    $state = 'success';
+
+    $old_artifacts = null;
     if ($base_build !== null) {
       // Can compare to base
-      // TODO
-    }
+      $old_artifacts = $base_build->buildArtifacts->keyBy('project_artifact_id');
+      $total_old_size = $old_artifacts
+        ->map(function ($x) { return $x->size; })
+        ->sum();
 
-    $total_size = 0;
-    foreach ($build_artifacts as $artifact) {
-      $total_size += $artifact->size;
+      $diff = $total_old_size - $total_size;
+      $diff_percent = round($diff / $total_old_size * 100.0, 2);
+      if ($diff > 0) {
+        $description .= ' (decreased by ' . Format::fileSize($diff) . ' / ' . $diff_percent . '%)';
+      } else {
+        $description .= ' (increased by ' . Format::fileSize(-$diff) . ' / ' . -$diff_percent . '%)';
+        if ($diff < static::WARN_THRESHOLD) {
+          $state = 'failure';
+        }
+      }
     }
 
     $github->repo()->statuses()->create(
@@ -213,8 +230,8 @@ abstract class CircleCI {
       $payload['commit']['sha'],
       [
         'context' => config('buildsize.github.status_context_prefix') . '/total',
-        'description' => 'Build size: ' . Format::fileSize($total_size),
-        'state' => 'success',
+        'description' => $description,
+        'state' => $state,
         'target_url' => 'http://example.com/', // TODO
       ]
     );

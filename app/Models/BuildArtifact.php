@@ -30,4 +30,8 @@ class BuildArtifact extends Model {
   public function build() {
     return $this->belongsTo(Build::class);
   }
+
+  public function projectArtifact() {
+    return $this->belongsTo(ProjectArtifact::class);
+  }
 }
