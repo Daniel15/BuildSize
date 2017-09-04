@@ -11,18 +11,26 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Carbon\Carbon|null $created_at
  * @property \Carbon\Carbon|null $updated_at
  * @property string|null $access_token
- * @property string|null $access_token_expiry
- * @method static \Illuminate\Database\Eloquent\Builder|\App\GithubInstall whereAccessToken($value)
- * @method static \Illuminate\Database\Eloquent\Builder|\App\GithubInstall whereAccessTokenExpiry($value)
- * @method static \Illuminate\Database\Eloquent\Builder|\App\GithubInstall whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|\App\GithubInstall whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|\App\GithubInstall whereUpdatedAt($value)
+ * @property \Carbon\Carbon|null $access_token_expiry
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\GithubInstall whereAccessToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\GithubInstall whereAccessTokenExpiry($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\GithubInstall whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\GithubInstall whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\GithubInstall whereUpdatedAt($value)
  * @mixin \Eloquent
  * @property int $install_id
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\GithubInstall whereInstallId($value)
+ * @property string $org_name
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\GithubInstall whereOrgName($value)
  */
 class GithubInstall extends Model {
   protected $fillable = ['install_id', 'access_token', 'access_token_expiry', 'org_name'];
+  protected $dates = [
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'access_token_expiry',
+  ];
 
   public function getAccessTokenAttribute($value) {
     return $value === null ? null : decrypt($value);

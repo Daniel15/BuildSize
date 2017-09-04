@@ -80,7 +80,10 @@ class GithubController extends Controller {
   private function handleStatus(Request $request) {
     switch ($request->input('context')) {
       case 'ci/circleci':
-        CircleCI::analyzeBuildFromURL($request->input('target_url'));
+        CircleCI::analyzeBuildFromURL(
+          $request->input('target_url'),
+          $request->all()
+        );
         break;
 
       default:
