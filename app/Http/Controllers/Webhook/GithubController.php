@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Webhook;
 
 use App\CircleCI;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\GithubInstall;
 use App\Models\Project;
 use Illuminate\Http\Request;
@@ -89,6 +90,30 @@ class GithubController extends Controller {
       default:
         return 'Unknown context "' . $request->input('context') . '"';
     }
+  }
+
+  // https://developer.github.com/v3/activity/events/types/#pushevent
+  /** @noinspection PhpUnusedPrivateMethodInspection */
+  private function handlePush(Request $request) {
+    // We only care about pushes to branches
+    $ref = $request->input('ref');
+    if (!preg_match('~^refs/heads/(?<branch>.+)$~', $ref, $matches)) {
+      return;
+    }
+    $branch = $matches['branch'];
+
+    // Save the latest commit info for this branch
+    Branch::updateOrCreate(
+      [
+        'branch' => $branch,
+        'org_name' => $request->input('repository.owner.name'),
+        'repo_name' => $request->input('repository.name'),
+      ],
+      [
+        'author' => $request->input('head_commit.author.username'),
+        'latest_commit' => $request->input('head_commit.id'),
+      ]
+    );
   }
 
   private function addRepositories(string $org_name, array $repos) {
