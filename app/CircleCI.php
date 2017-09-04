@@ -2,10 +2,9 @@
 
 namespace App;
 
-// TODO: Test CircleCI 2.0
 // TODO: Generalize this
 
-use App\Helpers\Format;
+use App\Events\BuildCompletedEvent;
 use App\Models\Branch;
 use App\Models\Build;
 use App\Models\BuildArtifact;
@@ -15,11 +14,8 @@ use App\Models\ProjectArtifact;
 use GuzzleHttp\Client;
 use GuzzleHttp\Promise;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 abstract class CircleCI {
-  const WARN_THRESHOLD = 10000; // TODO make this configurable
-
   public static function analyzeBuildFromURL(string $url, $payload) {
     $parts = static::parseBuildURL($url);
     static::analyzeBuild($parts['owner'], $parts['repo'], $parts['build'], $payload);
@@ -70,7 +66,7 @@ abstract class CircleCI {
     if (count($payload['branches']) > 0) {
       // Build is on a branch, so save information for that branch
       foreach ($payload['branches'] as $branch) {
-        static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, $github, [
+        static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, $install, [
           'org_name' => $payload['repository']['owner']['login'],
           'repo_name' => $payload['repository']['name'],
           'identifier' => $branch['name'] . '/' . $payload['commit']['sha'],
@@ -92,7 +88,7 @@ abstract class CircleCI {
             $pull_request_url['reponame'],
             $pull_request_url['pr_number']
           );
-          static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, $github, [
+          static::saveArtifactsForProjectBuild($artifacts, $sizes, $payload, $install, [
             'org_name' => $pull_request_url['username'],
             'repo_name' => $pull_request_url['reponame'],
             'pull_request' => $pull_request_url['pr_number'],
@@ -114,7 +110,7 @@ abstract class CircleCI {
     $artifacts,
     $sizes,
     $payload,
-    \Github\Client $github,
+    GithubInstall $install,
     $metadata
   ) {
     // TODO: This should handle default_branch too
@@ -184,7 +180,6 @@ abstract class CircleCI {
         ]
       );
     }
-    $build_artifacts = collect($build_artifacts)->keyBy('project_artifact_id');
 
     $base_build = null;
     if (!empty($metadata['build_data']['base_commit'])) {
@@ -205,155 +200,33 @@ abstract class CircleCI {
             ->where('commit', $latest_branch->latest_commit)
             ->with('buildArtifacts')
             ->first();
+
+          // TODO: Should this just use the most recently stored build on the branch if this fails?
         }
       }
     }
 
-    $total_size = array_sum($sizes);
-    $description = 'Build size: ' . Format::fileSize($total_size);
-    $state = 'success';
+    $base_build_artifacts = $base_build
+      ? $base_build->buildArtifacts->keyBy('project_artifact_id')
+      : null;
 
-    $old_artifacts = null;
-    $diff = null;
-    $diff_percent = null;
-    $total_old_size = null;
-    if ($base_build !== null) {
-      // Can compare to base
-      $old_artifacts = $base_build->buildArtifacts->keyBy('project_artifact_id');
-      $total_old_size = $old_artifacts
-        ->map(function ($x) { return $x->size; })
-        ->sum();
+    event(new BuildCompletedEvent([
+      'install' => $install,
 
-      $diff = $total_old_size - $total_size;
-      $diff_percent = round($diff / $total_old_size * 100.0, 2);
-      if ($diff > 0) {
-        $description .= ' (decreased by ' . Format::fileSize($diff) . ', ' . $diff_percent . '%)';
-      } else {
-        $description .= ' (increased by ' . Format::fileSize(-$diff) . ', ' . -$diff_percent . '%)';
-        if ($diff < static::WARN_THRESHOLD) {
-          //$state = 'failure';
-        }
-      }
-    }
+      'project' => $project,
+      'build' => $build,
+      'build_artifacts' => collect($build_artifacts)->keyBy('project_artifact_id'),
+      'total_size' => array_sum($sizes),
 
-    $github->repo()->statuses()->create(
-      $metadata['org_name'],
-      $metadata['repo_name'],
-      $payload['commit']['sha'],
-      [
-        'context' => config('buildsize.github.status_context_prefix') . '/total',
-        'description' => $description,
-        'state' => $state,
-        'target_url' => 'http://example.com/', // TODO
-      ]
-    );
-
-    // TODO: Make this configurable
-    if (
-      $base_build !== null &&
-      $diff !== null &&
-      $old_artifacts !== null &&
-      !empty($metadata['build_data']['pull_request'])
-    ) {
-      $file_comment_data = [];
-
-      // Add all the old artifacts
-      foreach ($old_artifacts as $old_artifact) {
-        $new_artifact = $build_artifacts->get($old_artifact->project_artifact_id);
-        $file_comment_data[] = [
-          'name' => $old_artifact->projectArtifact->name,
-          'old_size' => $old_artifact->size,
-          'new_size' => $new_artifact
-            ? $new_artifact->size
-            : null,
-        ];
-      }
-
-      // Add any new artifacts that didn't exist previously
-      foreach ($build_artifacts as $new_artifact) {
-        if ($old_artifacts->has($new_artifact->project_artifact_id)) {
-          continue;
-        }
-        $file_comment_data[] = [
-          'name' => $new_artifact->projectArtifact->name,
-          'old_size' => null,
-          'new_size' => $new_artifact->size,
-        ];
-      }
-
-      // Build the comment
-      $message = $diff > 0
-        ? ('This change will decrease the build size from ' . Format::fileSize($total_old_size) . ' to ' .
-          Format::fileSize($total_size) . ', a decrease of ' . Format::fileSize($diff) . ' (' . $diff_percent . '%)')
-        : ('This change will increase the build size from ' . Format::fileSize($total_old_size) . ' to ' .
-          Format::fileSize($total_size) . ', an increase of ' . Format::fileSize(-$diff) . ' (' . -$diff_percent . '%)');
-
-      $message .= <<<EOT
-
-
-| File name | Previous Size | New Size | Change |
-| --------- | ------------- | -------- | ------ |
-
-EOT;
-      foreach ($file_comment_data as $data) {
-        $message .= '| ' . $data['name'] . ' | ';
-        $message .= ($data['old_size'] === null ? '[new file]' : Format::fileSize($data['old_size'])) . ' | ';
-        $message .= ($data['new_size'] === null ? '[deleted]' : Format::fileSize($data['new_size'])) . ' | ';
-        if ($data['old_size'] !== null && $data['new_size'] !== null) {
-          $message .= Format::diffFileSizeWithPercentage($data['old_size'], $data['new_size']) . ' | ';
-        } else {
-          $message .= ' | ';
-        }
-        $message .= "\n";
-      }
-
-      // Check if a comment already exists
-      $comment_id = static::checkForExistingComment(
-        $github,
-        $metadata['org_name'],
-        $metadata['repo_name'],
-        $metadata['build_data']['pull_request']
-      );
-
-      if ($comment_id !== null) {
-        $github->issue()->comments()->update(
-          $metadata['org_name'],
-          $metadata['repo_name'],
-          $comment_id,
-          [
-            'body' => $message,
-          ]
-        );
-      } else {
-        $github->issue()->comments()->create(
-          $metadata['org_name'],
-          $metadata['repo_name'],
-          $metadata['build_data']['pull_request'],
-          [
-            'body' => $message,
-          ]
-        );
-      }
-    }
-  }
-
-  private static function checkForExistingComment(
-    \Github\Client $github,
-    string $org_name,
-    string $repo_name,
-    int $pull_request
-  ) {
-    $comments = $github->issue()->comments()->all(
-      $org_name,
-      $repo_name,
-      $pull_request
-    );
-    foreach ($comments as $comment) {
-      if (ends_with($comment['user']['html_url'], '/apps/' . env('GITHUB_APP_ALIAS'))) {
-        return $comment['id'];
-      }
-    }
-    return null;
+      'has_base_build' => (bool)$base_build && (bool)$base_build_artifacts,
+      'base_build' => $base_build,
+      'base_build_artifacts' => $base_build_artifacts,
+      'base_total_size' => $base_build_artifacts
+        ? $base_build_artifacts
+            ->map(function ($x) { return $x->size; })
+            ->sum()
+        : null,
+    ]));
   }
 
   private static function getArtifactSizes(array $artifacts): array {
