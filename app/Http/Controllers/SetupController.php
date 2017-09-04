@@ -51,6 +51,7 @@ class SetupController extends Controller {
   public function showRepoInstructions(string $org_name, string $repo_name) {
     // Check for supported CI systems
     $files_to_check = [
+      'appveyor' => 'appveyor.yml',
       'circle' => 'circle.yml',
       'circle2' => '.circleci/config.yml',
       'travis' => '.travis.yml',

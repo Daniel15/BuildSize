@@ -25,4 +25,9 @@
       <strong>Travis detected</strong>. Unfortunately BuildSize does not support Travis yet. Coming soon!
     </li>
   @endif
+  @if ($results['appveyor'])
+    <li>
+      <strong>AppVeyor detected</strong>. AppVeyor support is coming soon!
+    </li>
+  @endif
 </ul>
