@@ -39,6 +39,13 @@ abstract class CircleCI {
       $reponame,
       $build_num
     );
+
+    // Ignore failed builds
+    if ($build->status === 'failed') {
+      return;
+    }
+
+    // Ignore builds with no artifacts
     if (count($artifacts) === 0) {
       return;
     }
