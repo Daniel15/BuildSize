@@ -3,6 +3,8 @@
 
 [BuildSize](https://buildsize.org/) is a simple web app allowing you to automatically track the size of your build artifacts. For each pull request you receive, BuildSize will automatically calculate the size of the build artifacts, and leave a comment (and a build status message) comparing them to the latest master version.
 
+This is currently a work-in-progress. More documentation (including documentation on how to self-host it) will be coming in the future.
+
 Features
 ========
 * **Simple to use**. BuildSize uses the artifacts from your existing CI system, so there's practically no configuration required, and it's available as a GitHub App so you don't need to install any software. Just install the GitHub App to your repository and that's it!
