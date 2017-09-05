@@ -46,7 +46,7 @@ class GitHubStatusListener {
         'context' => config('buildsize.github.status_context_prefix') . '/total',
         'description' => $description,
         'state' => $state,
-        'target_url' => 'http://example.com/2222', // TODO
+        'target_url' => 'https://buildsize.org/', // TODO
       ]
     );
   }
