@@ -24,7 +24,8 @@
         <h2>No Configuration Necessary</h2>
         <p>
           If you are using CircleCI* and it is configured to archive your artifacts, getting started
-          with {{ config('app.name') }} is easy! Just add the app to your repo and that's it!
+          with {{ config('app.name') }} is easy! Just add the GitHub App to your repo and that's it! All artifacts will
+          be automatically monitored.
         </p>
         <p class="text-muted">* Support for other CI systems coming soon</p>
       </div>
@@ -37,10 +38,10 @@
         </p>
       </div>
       <div class="col-md-4">
-        <h2>Open Source</h2>
+        <h2>It's Open Source</h2>
         <p>
-          {{ config('app.name') }} is open source, so you can do whatever you want with it. Contribute, or even run
-          your own version.
+          {{ config('app.name') }} is open source, so you can do whatever you want with it. Contribute some bug fixes,
+          or even run your own version.
         </p>
       </div>
       <!--<div class="col-md-4">
