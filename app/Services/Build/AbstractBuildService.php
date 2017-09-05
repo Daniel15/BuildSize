@@ -96,6 +96,9 @@ abstract class AbstractBuildService {
         'branch' => $build_info['branch'],
         'commit' => $payload['commit']['sha'],
         'committer' => $payload['commit']['author']['login'],
+        'pull_request' => empty($build_info['pull_request'])
+          ? null
+          : $build_info['pull_request']['number'],
       ]
     );
 
