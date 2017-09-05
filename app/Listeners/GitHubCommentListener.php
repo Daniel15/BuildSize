@@ -22,6 +22,8 @@ class GitHubCommentListener {
    */
   public function handle(BuildCompletedEvent $event) {
     // TODO: Make this configurable (ie. allow disabling comments)
+    // Temporarily disabled until it's made configurable
+    return;
 
     if (!$event->has_base_build || empty($event->build->pull_request)) {
       return;
