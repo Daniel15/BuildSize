@@ -26,7 +26,7 @@ class CircleCI extends AbstractBuildService {
     );
 
     // Ignore failed builds
-    if ($build->status === 'failed') {
+    if ($build->status !== 'success' && $build->status !== 'fixed') {
       return;
     }
     // Ignore builds with no artifacts
