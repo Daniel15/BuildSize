@@ -22,10 +22,13 @@ class GitHubCommentListener {
    */
   public function handle(BuildCompletedEvent $event) {
     // TODO: Make this configurable (ie. allow disabling comments)
-    // Temporarily disabled until it's made configurable
-    return;
 
     if (!$event->has_base_build || empty($event->build->pull_request)) {
+      return;
+    }
+
+    // If the change is trivial, don't bother posting a comment.
+    if (abs($event->total_size - $event->base_total_size) < config('buildsize.github.trivial_size')) {
       return;
     }
 
