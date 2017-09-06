@@ -24,9 +24,11 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\BuildArtifact whereUpdatedAt($value)
  * @mixin \Eloquent
  * @property-read \App\Models\ProjectArtifact $projectArtifact
+ * @property string|null $url
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\BuildArtifact whereUrl($value)
  */
 class BuildArtifact extends Model {
-  protected $fillable = ['build_id', 'project_artifact_id', 'filename', 'size'];
+  protected $fillable = ['build_id', 'project_artifact_id', 'filename', 'size', 'url'];
 
   public function build() {
     return $this->belongsTo(Build::class);

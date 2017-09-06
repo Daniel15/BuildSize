@@ -135,7 +135,7 @@ abstract class AbstractBuildService {
     // we can save the build artifacts.
     $sizes = $this->getAndCacheArtifactSizes($artifacts);
     $build_artifacts = [];
-    foreach ($artifacts as $filename => $_) {
+    foreach ($artifacts as $filename => $url) {
       $build_artifacts[] = BuildArtifact::updateOrCreate(
         [
           'build_id' => $build->id,
@@ -145,6 +145,7 @@ abstract class AbstractBuildService {
         [
           'filename' => $filename,
           'size' => $sizes[$filename],
+          'url' => $url,
         ]
       );
     }

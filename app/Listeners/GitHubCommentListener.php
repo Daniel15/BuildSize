@@ -79,8 +79,12 @@ class GitHubCommentListener {
       $data[] = [
         'name' => $old_artifact->projectArtifact->name,
         'old_size' => $old_artifact->size,
+        'old_url' => $old_artifact->url,
         'new_size' => $new_artifact
           ? $new_artifact->size
+          : null,
+        'new_url' => $new_artifact
+          ? $new_artifact->url
           : null,
       ];
     }
@@ -93,7 +97,9 @@ class GitHubCommentListener {
       $data[] = [
         'name' => $new_artifact->projectArtifact->name,
         'old_size' => null,
+        'old_url' => null,
         'new_size' => $new_artifact->size,
+        'new_url' => $new_artifact->url,
       ];
     }
 
@@ -122,8 +128,8 @@ class GitHubCommentListener {
 EOT;
     foreach ($artifacts as $artifact) {
       $message .= '| ' . $artifact['name'] . ' | ';
-      $message .= ($artifact['old_size'] === null ? '[new file]' : Format::fileSize($artifact['old_size'])) . ' | ';
-      $message .= ($artifact['new_size'] === null ? '[deleted]' : Format::fileSize($artifact['new_size'])) . ' | ';
+      $message .= $this->renderFileSizeCell($artifact['old_size'], $artifact['old_url'], '[new file]');
+      $message .= $this->renderFileSizeCell($artifact['new_size'], $artifact['new_url'], '[deleted]');
       if ($artifact['old_size'] !== null && $artifact['new_size'] !== null) {
         $message .= Format::diffFileSizeWithPercentage($artifact['old_size'], $artifact['new_size']) . ' | ';
       } else {
@@ -133,6 +139,17 @@ EOT;
     }
 
     return $message;
+  }
+
+  private function renderFileSizeCell(?int $size, ?string $url, string $placeholder): string {
+    if ($size === null) {
+      return $placeholder;
+    }
+    $result = Format::fileSize($size);
+    if (!empty($url)) {
+      $result = '[' . $result . '](' . $url . ')';
+    }
+    return $result . ' | ';
   }
 
   private function checkForExistingComment(
