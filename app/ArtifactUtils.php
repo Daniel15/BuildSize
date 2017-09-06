@@ -14,8 +14,8 @@ abstract class ArtifactUtils {
   public static function generalizeName(string $name): string {
 
     // Find last continuous alpha sequence beginning with a dot, and assume it's the extension
-    preg_match('/((\.[a-z][a-z0-9]+)+)$/i', $name, $matches);
-    if ($matches === null) {
+    $has_extension = preg_match('/((\.[a-z][a-z0-9]+)+)$/i', $name, $matches);
+    if ($has_extension !== 1) {
       $extension = '';
       $basename = $name;
     } else {
@@ -25,7 +25,7 @@ abstract class ArtifactUtils {
 
     // Strip version numbers just from the basename
     $basename = preg_replace(
-      '/([0-9][0-9\.\-]+)/',
+      '/([0-9][0-9\.\-_]+)/',
       static::VERSION_PLACEHOLDER,
       $basename
     );

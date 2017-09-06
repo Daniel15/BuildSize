@@ -17,8 +17,11 @@ class ArtifactUtilsTest extends TestCase {
     return [
       ['yarn-1.2.3.js', 'yarn-[version].js'],
       ['yarn-v1.0.0-20170829.1752.tar.gz', 'yarn-v[version].tar.gz'],
+      ['yarn-1.0.0-1.noarch.rpm', 'yarn-[version].noarch.rpm'],
+      ['yarn-1.0.0_20170905.1413-1.noarch.rpm', 'yarn-[version].noarch.rpm'],
       ['hello-world.sqlite3', 'hello-world.sqlite3'],
       ['babel.js', 'babel.js'],
+      ['noextension', 'noextension'],
     ];
   }
 }
