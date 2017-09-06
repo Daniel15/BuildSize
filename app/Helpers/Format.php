@@ -14,6 +14,9 @@ abstract class Format {
    * @return string
    */
   public static function fileSize(int $size): string {
+    if ($size === 0) {
+      return '0 bytes';
+    }
     $negative = false;
     if ($size < 0) {
       $negative = true;
