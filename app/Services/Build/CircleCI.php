@@ -72,10 +72,9 @@ class CircleCI extends AbstractBuildService {
   private function getBuildFromAPI(string $username, string $reponame, int $build_num): array {
     $client = new \GuzzleHttp\Client([
       'base_uri' => sprintf(
-        'https://circleci.com/api/v1.1/project/github/%s/%s/%s/',
+        'https://circleci.com/api/v1.1/project/github/%s/%s/',
         $username,
-        $reponame,
-        $build_num
+        $reponame
       ),
     ]);
     $options = [
@@ -85,10 +84,10 @@ class CircleCI extends AbstractBuildService {
       ],
     ];
     return Promise\unwrap([
-      $client->getAsync('', $options)->then(function ($response) {
+      $client->getAsync((string)$build_num, $options)->then(function ($response) {
         return json_decode((string)$response->getBody());
       }),
-      $client->getAsync('artifacts', $options)->then(function ($response) {
+      $client->getAsync($build_num . '/artifacts', $options)->then(function ($response) {
         // Convert the raw data into a map of filename => url
         $data = json_decode((string)$response->getBody());
         $artifacts = [];
