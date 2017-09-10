@@ -1,0 +1,8 @@
+parameters:
+  git_dir: .
+  bin_dir: vendor/bin
+  tasks:
+    securitychecker:
+    phpcpd:
+    phplint:
+    phpunit:
