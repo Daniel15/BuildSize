@@ -1,3 +1,5 @@
+<!-- https://buildsize.org/docs/comparison -->
+
 BuildSize compared to others
 ============================
 

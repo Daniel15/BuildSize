@@ -7,6 +7,7 @@
     "require": {
         "php": ">=7.0.0",
         "doctrine/dbal": "^2.6",
+        "erusev/parsedown": "^1.6",
         "fideloper/proxy": "~3.3",
         "firebase/php-jwt": "^5.0",
         "graham-campbell/github": "^6.0",
