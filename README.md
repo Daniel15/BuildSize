@@ -5,15 +5,17 @@
 
 This is currently a work-in-progress. More documentation (including documentation on how to self-host it) will be coming in the future.
 
+If you want to hack on BuildSize, see [the development documentation](https://buildsize.org/docs/development).
+
 Features
 ========
 * **Simple to use**. BuildSize uses the artifacts from your existing CI system, so there's practically no configuration required, and it's available as a GitHub App so you don't need to install any software. Just install the GitHub App to your repository and that's it!
-* **Supports CircleCI**, with more build systems coming soon. 
+* **Supports CircleCI**, with more build systems coming soon.
 * **Open-source**. Use the hosted version at https://buildsize.org/, or host it yourself.
 
 Similar Projects
 ================
-There are a few similar projects to BuildSize, such as [bundlesize](https://github.com/siddharthkp/bundlesize). [See how BuildSize differs](docs/comparison.md).
+There are a few similar projects to BuildSize, such as [bundlesize](https://github.com/siddharthkp/bundlesize). [See how BuildSize differs](https://buildsize.org/docs/comparison.md).
 
 Licence
 =======
