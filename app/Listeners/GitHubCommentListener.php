@@ -8,12 +8,15 @@ use App\Helpers\Format;
 use App\Models\Build;
 use App\Models\Project;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * When a build has completed for a pull request, posts a comment on the pull request.
  * @package App\Listeners
  */
 class GitHubCommentListener {
+  const CACHE_INTERVAL = 0.5; // minutes
+
   /**
    * Handle the event.
    *
@@ -58,16 +61,29 @@ class GitHubCommentListener {
           'body' => $message,
         ]
       );
-    } else {
-      $github->issue()->comments()->create(
-        $event->project->org_name,
-        $event->project->repo_name,
-        $event->build->pull_request,
-        [
-          'body' => $message,
-        ]
-      );
+      return;
     }
+
+    // There's a race condition here: Sometimes CircleCI calls GitHub's build status API multiple times in quick
+    // succession, which results in multiple comments being posted by BuildSize in parallel. To avoid this, we use the
+    //cache to keep track of whether a comment is currently being posted, to avoid posting a second one.
+    $cache_key = 'comment_'.$event->project->org_name.'_'.$event->project->repo_name.'_'.$event->build->pull_request;
+    $is_currently_posting = Cache::get($cache_key, false);
+    if ($is_currently_posting) {
+      // Parallel request is already taking place
+      return;
+    }
+
+    Cache::add($cache_key, true, static::CACHE_INTERVAL);
+    $github->issue()->comments()->create(
+      $event->project->org_name,
+      $event->project->repo_name,
+      $event->build->pull_request,
+      [
+        'body' => $message,
+      ]
+    );
+    Cache::delete($cache_key);
   }
 
   private function collectArtifacts(
