@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\GithubUtils;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 /**
@@ -35,5 +36,16 @@ class User extends Authenticatable {
 
   public function setGithubTokenAttribute($value) {
     $this->attributes['github_token'] = encrypt($value);
+  }
+
+  /**
+   * Gets a list of GitHub installations this user is able to access.
+   */
+  public function getGithubInstalls(): array {
+    $github = GithubUtils::createClientForUser($this);
+
+    $paginator = new \Github\ResultPager($github);
+    $installs = $paginator->fetchAll($github->currentUser(), 'installations');
+    return $installs['installations'];
   }
 }

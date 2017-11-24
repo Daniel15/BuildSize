@@ -25,7 +25,13 @@
       <ul>
         @forelse ($projects->get($install['account']['login'], []) as $project)
           <li>
-            {{ $project->repo_name }}
+            {{ $project->repo_name }}<br />
+            <a href="{{ action('RepoSettingsController', [
+              'org_name' => $project->org_name,
+              'repo_name' => $project->repo_name,
+            ]) }}">
+              Configure
+            </a>
           </li>
         @empty
           <li>

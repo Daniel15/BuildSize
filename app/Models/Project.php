@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Model;
  * @mixin \Eloquent
  * @property int $active
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\Project whereActive($value)
+ * @property int $min_change_for_comment
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\Project whereMinChangeForComment($value)
  */
 class Project extends Model {
   protected $fillable = ['host', 'org_name', 'repo_name', 'url', 'github_install_id', 'active'];

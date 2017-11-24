@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\GithubUtils;
 use App\Models\Project;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,15 +13,8 @@ class DashboardController extends Controller {
   public function __invoke() {
     // TODO: Check if auth token is still valid
     $user = Auth::user();
-    $github = GithubUtils::createClientForUser($user);
-
-    $paginator = new \Github\ResultPager($github);
-    $installs = $paginator->fetchAll($github->currentUser(), 'installations');
-
-    $org_names = [];
-    foreach ($installs['installations'] as $install) {
-      $org_names[] = $install['account']['login'];
-    }
+    $installs = $user->getGithubInstalls();
+    $org_names = array_pluck($installs, 'account.login');
 
     // Find projects in all orgs that the user has installed the
     $projects = Project::whereIn('org_name', $org_names)
@@ -33,7 +25,7 @@ class DashboardController extends Controller {
       });
 
     return view('dashboard', [
-      'installs' => $installs['installations'],
+      'installs' => $installs,
       'projects' => $projects,
     ]);
   }

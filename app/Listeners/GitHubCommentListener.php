@@ -28,7 +28,8 @@ class GitHubCommentListener {
     }
 
     // If the change is trivial, don't bother posting a comment.
-    if (abs($event->total_size - $event->base_total_size) < config('buildsize.github.trivial_size')) {
+    $min_change_for_comment = $event->project->min_change_for_comment ?? config('buildsize.github.trivial_size');
+    if (abs($event->total_size - $event->base_total_size) < $min_change_for_comment) {
       return;
     }
 
