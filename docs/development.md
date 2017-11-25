@@ -37,6 +37,10 @@ Copy `.env.example` to `.env`, and modify it to reflect settings specific to you
  - `DB_DATABASE`, `DB_USERNAME` and `DB_PASSWORD`: MySQL database credentials
  - `APP_KEY`: Randomly-generated encryption key. Run `php artisan key:generate` to set it
 
+Put private key to `storage/app`
+  - Download private key from "Private key" section of the app config
+  - Rename and move this pem file to `storage/app/github.key`
+
 ## Install Dependencies
 
 - Run `composer install`
