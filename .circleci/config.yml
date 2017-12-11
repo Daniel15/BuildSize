@@ -1,0 +1,77 @@
+version: 2
+
+defaults:
+  workspace_root: &workspace_root
+    ~/BuildSize
+
+  php_container: &php_container
+    working_directory: *workspace_root
+    docker:
+      - image: circleci/php:7.2
+
+  attach_workspace: &attach_workspace
+    attach_workspace:
+      at: *workspace_root
+
+  restore_composer: &restore_composer
+    restore_cache:
+      name: Restore composer cache
+      keys:
+        - v1-composer-{{ checksum "composer.lock" }}
+        - v1-composer-
+
+jobs:
+  checkout:
+    <<: *php_container
+    steps:
+      - checkout
+
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - ./
+
+  composer:
+    <<: *php_container
+    steps:
+      - *attach_workspace
+      - *restore_composer
+
+      - run:
+          name: Install dependencies
+          command: composer install --no-interaction
+
+      - save_cache:
+          name: Save composer cache
+          key: v1-composer-{{ checksum "composer.lock" }}
+          paths:
+            - vendor
+
+  test:
+    <<: *php_container
+    steps:
+      - *attach_workspace
+      - *restore_composer
+
+      - run:
+          name: Run PHP tests
+          command: ./vendor/bin/phpunit --log-junit reports/phpunit/junit.xml
+
+      - store_test_results:
+          path: reports/phpunit
+
+
+workflows:
+  version: 2
+
+  push:
+    jobs:
+      - checkout
+
+      - composer:
+          requires:
+            - checkout
+
+      - test:
+          requires:
+            - composer
