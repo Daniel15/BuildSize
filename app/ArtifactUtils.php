@@ -12,23 +12,12 @@ abstract class ArtifactUtils {
    * @return string
    */
   public static function generalizeName(string $name): string {
-
-    // Find last continuous alpha sequence beginning with a dot, and assume it's the extension
-    $has_extension = preg_match('/((\.[a-z][a-z0-9]+)+)$/i', $name, $matches);
-    if ($has_extension !== 1) {
-      $extension = '';
-      $basename = $name;
-    } else {
-      $extension = $matches[0];
-      $basename = substr($name, 0, -strlen($extension));
-    }
-
-    // Strip version numbers just from the basename
-    $basename = preg_replace(
-      '/([0-9][0-9\.\-_]+)/',
+    // Strip version numbers
+    $name = preg_replace(
+      '/([0-9]+(\.[0-9_-]+)+)/',
       static::VERSION_PLACEHOLDER,
-      $basename
+      $name
     );
-    return $basename . $extension;
+    return $name;
   }
 }
