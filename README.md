@@ -15,7 +15,7 @@ Features
 
 Similar Projects
 ================
-There are a few similar projects to BuildSize, such as [bundlesize](https://github.com/siddharthkp/bundlesize). [See how BuildSize differs](https://buildsize.org/docs/comparison.md).
+There are a few similar projects to BuildSize, such as [bundlesize](https://github.com/siddharthkp/bundlesize). [See how BuildSize differs](https://buildsize.org/docs/comparison).
 
 Licence
 =======
