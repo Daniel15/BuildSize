@@ -35,7 +35,7 @@ class GitHubStatusListener {
         } else {
           $description .= ' (increased by ' . Format::fileSize(-$diff) . ', ' . -$diff_percent . '%)';
           if ($diff < static::WARN_THRESHOLD) {
-            //$state = 'failure';
+            $state = 'failure';
           }
         }
       }
