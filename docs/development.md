@@ -25,6 +25,18 @@ You will need to [create an app on GitHub](https://github.com/settings/apps/new)
  - Setup URL: `http://localhost:8000/setup`
  - Webhook URL: Publicly accessible URL for your app followed by `/webhook/github` (eg. `https://username.dyndns.org:8000/webhook/github` or `https://1234567.ngrok.io/webhook/github`)
  - Webhook secret: Any random string. Remember it for later!
+ 
+ Permissions:
+  - Commit statuses: Read & Write
+  - Pull requests: Read & Write (required to post comments)
+  - Repository contents: Read-only (required to check for CircleCI / Travis config)
+  
+ Event subscriptions:
+  - Status
+  - Pull request
+  - Push
+  - Create (branch or tag)
+  - Push
 
 ## Configuration
 
