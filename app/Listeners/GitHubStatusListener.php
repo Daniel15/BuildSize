@@ -26,7 +26,7 @@ class GitHubStatusListener {
     if ($event->has_base_build) {
       // Can compare to base
       $diff = $event->base_total_size - $event->total_size;
-      if (abs($diff) == 0) {
+      if (abs($diff) === 0) {
        $description .= ' (no change)';
       } else if (abs($diff) < config('buildsize.github.trivial_size')) {
         $description .= ' (no significant change)';
