@@ -9,6 +9,11 @@ defaults:
     docker:
       - image: circleci/php:7.2
 
+  node_container: &node_container
+    working_directory: *workspace_root
+    docker:
+      - image: circleci/node:8
+
   attach_workspace: &attach_workspace
     attach_workspace:
       at: *workspace_root
@@ -19,6 +24,13 @@ defaults:
       keys:
         - v1-composer-{{ checksum "composer.lock" }}
         - v1-composer-
+
+  restore_yarn: &restore_yarn
+    restore_cache:
+      name: Restore yarn cache
+      keys:
+        - v1-yarn-{{ checksum "yarn.lock" }}
+        - v1-yarn-
 
 jobs:
   checkout:
@@ -47,6 +59,38 @@ jobs:
           paths:
             - vendor
 
+  yarn:
+    <<: *node_container
+    steps:
+      - *attach_workspace
+      - *restore_yarn
+
+      - run:
+          name: Install dependencies
+          command: yarn --frozen-lockfile
+
+      - save_cache:
+          name: Save yarn cache
+          key: v1-yarn-{{ checksum "yarn.lock" }}
+          paths:
+            - node_modules
+
+  webpack:
+    <<: *node_container
+    steps:
+      - *attach_workspace
+      - *restore_yarn
+
+      - run:
+          name: Build client-side bundles
+          command: yarn prod
+
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - ./public/js
+            - ./public/css
+
   test:
     <<: *php_container
     steps:
@@ -72,6 +116,15 @@ workflows:
           requires:
             - checkout
 
+      - yarn:
+          requires:
+            - checkout
+
+      - webpack:
+          requires:
+            - yarn
+
       - test:
           requires:
             - composer
+            - webpack
