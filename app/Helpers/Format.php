@@ -15,7 +15,7 @@ abstract class Format {
    */
   public static function fileSize(int $size): string {
     if ($size === 0) {
-      return '0 bytes';
+      return '0 bytes';
     }
     $negative = false;
     if ($size < 0) {
@@ -23,7 +23,7 @@ abstract class Format {
       $size = -$size;
     }
     $base = log($size, 1024);
-    $suffixes = [' bytes', ' KB', ' MB', ' GB', ' TB'];
+    $suffixes = [' bytes', ' KB', ' MB', ' GB', ' TB'];
     $result = round(pow(1024, $base - floor($base)), 2) . $suffixes[floor($base)];
     return $negative ? ('-' . $result) : $result;
   }
