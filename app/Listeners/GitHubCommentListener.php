@@ -145,8 +145,8 @@ class GitHubCommentListener {
 EOT;
     foreach ($artifacts as $artifact) {
       $message .= '| ' . $artifact['name'] . ' | ';
-      $message .= $this->renderFileSizeCell($artifact['old_size'], $artifact['old_url'], '[new file]');
-      $message .= $this->renderFileSizeCell($artifact['new_size'], $artifact['new_url'], '[deleted]');
+      $message .= $this->renderFileSizeCell($artifact['old_size'], $artifact['old_url'], '[new file]') . ' | ';
+      $message .= $this->renderFileSizeCell($artifact['new_size'], $artifact['new_url'], '[deleted]') . ' | ';
       if ($artifact['old_size'] !== null && $artifact['new_size'] !== null) {
         $message .= Format::diffFileSizeWithPercentage($artifact['old_size'], $artifact['new_size']) . ' | ';
       } else {
@@ -166,7 +166,7 @@ EOT;
     if (!empty($url)) {
       $result = '[' . $result . '](' . $url . ')';
     }
-    return $result . ' | ';
+    return $result;
   }
 
   private function checkForExistingComment(
