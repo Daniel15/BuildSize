@@ -125,18 +125,7 @@ class GitHubCommentListener {
 
   private function buildMessage(array $artifacts, int $base_total_size, int $total_size) {
     $diff = $base_total_size - $total_size;
-    $message = $diff > 0
-      ? (
-        'This change will decrease the build size from ' . Format::fileSize($base_total_size) . ' to ' .
-        Format::fileSize($total_size) . ', a decrease of ' .
-        Format::diffFileSizeWithPercentage($total_size, $base_total_size)
-      ) : (
-        'This change will increase the build size from ' . Format::fileSize($base_total_size) . ' to ' .
-        Format::fileSize($total_size) . ', an increase of ' .
-        Format::diffFileSizeWithPercentage($base_total_size, $total_size)
-      );
-
-    $message .= <<<EOT
+    $message = <<<EOT
 
 
 | File name | Previous Size | New Size | Change |
