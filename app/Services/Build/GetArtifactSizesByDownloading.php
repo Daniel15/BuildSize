@@ -29,19 +29,19 @@ trait GetArtifactSizesByDownloading {
     $file_handles = [];
 
     try {
-      foreach ($artifacts as $filename => $url) {
-        $file_handle = fopen($dir . $filename, 'w');
-        $requests[$filename] = $artifact_client->getAsync($url, [
+      foreach ($artifacts as $path => $url) {
+        $file_handle = fopen($dir . static::cleanFilePath($path), 'w');
+        $requests[$path] = $artifact_client->getAsync($url, [
             'sink' => $file_handle,
           ]
         );
-        $file_handles[$filename] = $file_handle;
+        $file_handles[$path] = $file_handle;
       }
       Promise\unwrap($requests);
 
       $sizes = [];
-      foreach ($artifacts as $filename => $url) {
-        $sizes[$filename] = fstat($file_handles[$filename])['size'];
+      foreach ($artifacts as $path => $url) {
+        $sizes[$path] = fstat($file_handles[$path])['size'];
       }
       return $sizes;
     } finally {
@@ -54,5 +54,9 @@ trait GetArtifactSizesByDownloading {
       }
       FilesystemUtils::recursiveRmDir($dir);
     }
+  }
+
+  private static function cleanFilePath(string $path): string {
+    return str_replace(['/', '\\'], '__', $path);
   }
 }

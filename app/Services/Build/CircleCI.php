@@ -92,7 +92,7 @@ class CircleCI extends AbstractBuildService {
         $data = json_decode((string)$response->getBody());
         $artifacts = [];
         foreach ($data as $artifact) {
-          $artifacts[basename($artifact->path)] = $artifact->url;
+          $artifacts[$artifact->path] = $artifact->url;
         }
         return $artifacts;
       })

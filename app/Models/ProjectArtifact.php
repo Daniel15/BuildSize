@@ -19,9 +19,11 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\ProjectArtifact whereProjectId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\ProjectArtifact whereUpdatedAt($value)
  * @mixin \Eloquent
+ * @property string $full_path
+ * @method static \Illuminate\Database\Eloquent\Builder|\App\Models\ProjectArtifact whereFullPath($value)
  */
 class ProjectArtifact extends Model {
-  protected $fillable = ['name'];
+  protected $fillable = ['name', 'full_path'];
 
   public function project() {
     return $this->belongsTo(Project::class);

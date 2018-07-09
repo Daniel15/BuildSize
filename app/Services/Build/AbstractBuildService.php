@@ -67,8 +67,6 @@ abstract class AbstractBuildService {
    * @todo Document the shape of $build_info
    */
   public function analyzeBuild(GithubInstall $install, $payload, array $artifacts, $build_info) {
-    //$sizes = $this->getAndCacheArtifactSizes($artifacts);
-
     // Load the project
     // TODO: This should handle default_branch too
     $project = Project::with('artifacts')->firstOrNew(
@@ -105,20 +103,38 @@ abstract class AbstractBuildService {
     // Find artifacts that have previously existed for this project
     // A build artifact is a unique artifact for the build, whereas a project artifact is a general
     // file name used across multiple builds for a single project.
-    $project_artifact_ids = [];
-    foreach ($project->artifacts as $artifact) {
-      $project_artifact_ids[$artifact->name] = $artifact->id;
-    }
+    $project_artifacts_by_name = $project->artifacts->keyBy('name');
+    $project_artifacts_by_path = $project->artifacts
+      ->keyBy('full_path')
+      ->map(function($x) { return $x->id; });
 
     // Determine if any artifacts for this build are artifacts that we've never seen before
-    $artifact_names = [];
+    $artifact_paths = [];
     $new_project_artifacts = [];
-    foreach ($artifacts as $filename => $_) {
+    foreach ($artifacts as $path => $_) {
+      $generalized_path = ArtifactUtils::generalizeName($path);
+      $artifact_paths[$path] = $generalized_path;
+      $filename = basename($path);
       $generalized_name = ArtifactUtils::generalizeName($filename);
-      $artifact_names[$filename] = $generalized_name;
-      if (!array_key_exists($generalized_name, $project_artifact_ids)) {
+
+      $project_artifact_id = $project_artifacts_by_path->get($generalized_path);
+      if (
+        !$project_artifact_id &&
+        $project_artifacts_by_name->has($generalized_name) &&
+        empty($project_artifacts_by_name[$generalized_name]->full_path)
+      ) {
+        // This artifact was likely seen before we started storing the full path
+        $project_artifact = $project_artifacts_by_name[$generalized_name];
+        $project_artifact->full_path = $generalized_path;
+        $project_artifact->save();
+        $project_artifact_id = $project_artifact->id;
+        $project_artifacts_by_path[$generalized_path] = $project_artifact_id;
+      }
+
+      if (!$project_artifact_id) {
         // This is the first time we've seen this artifact!
         $new_project_artifacts[] = new ProjectArtifact([
+            'full_path' => $path,
             'name' => $generalized_name,
           ]
         );
@@ -128,23 +144,23 @@ abstract class AbstractBuildService {
     // Save the new project artifacts
     $project->artifacts()->saveMany($new_project_artifacts);
     foreach ($new_project_artifacts as $artifact) {
-      $project_artifact_ids[$artifact->name] = $artifact->id;
+      $project_artifacts_by_path[$artifact->full_path] = $artifact->id;
     }
 
     // Now that we have all the project artifacts (either newly-created or existing project artifacts),
     // we can save the build artifacts.
     $sizes = $this->getAndCacheArtifactSizes($artifacts);
     $build_artifacts = [];
-    foreach ($artifacts as $filename => $url) {
+    foreach ($artifacts as $path => $url) {
       $build_artifacts[] = BuildArtifact::updateOrCreate(
         [
           'build_id' => $build->id,
           'project_artifact_id' =>
-            $project_artifact_ids[$artifact_names[$filename]],
+            $project_artifacts_by_path[$artifact_paths[$path]],
         ],
         [
-          'filename' => $filename,
-          'size' => $sizes[$filename],
+          'filename' => basename($path),
+          'size' => $sizes[$path],
           'url' => $url,
         ]
       );
