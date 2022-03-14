@@ -1,3 +1,9 @@
+⚠⚠⚠ \
+Due to a lack of free time, I'm no longer working on this project. Please email me if you'd like to take over its maintenance. \
+⚠⚠⚠
+
+---
+
 [BuildSize](https://buildsize.org/)
 =========
 
