@@ -7,6 +7,7 @@ use App\GithubUtils;
 use App\Helpers\Format;
 use App\Models\Build;
 use App\Models\Project;
+use Github\ResultPager;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -130,7 +131,7 @@ class GitHubCommentListener {
 
 | File name | Previous Size | New Size | Change |
 | --------- | ------------- | -------- | ------ |
-  
+
 EOT;
     foreach ($artifacts as $artifact) {
       $message .= '| ' . $artifact['name'] . ' | ';
@@ -163,16 +164,27 @@ EOT;
     Project $project,
     Build $build
   ) {
-    $comments = $github->issue()->comments()->all(
+    $issueCommentsApi = $github->issue()->comments();
+    $paginator  = new ResultPager($github);
+    $comments = $paginator->fetch($issueCommentsApi, 'all', [
       $project->org_name,
       $project->repo_name,
       $build->pull_request
-    );
-    foreach ($comments as $comment) {
-      if (ends_with($comment['user']['html_url'], '/apps/' . env('GITHUB_APP_ALIAS'))) {
-        return $comment['id'];
+    ]);
+
+    do {
+      $hasNext = false;
+      foreach ($comments as $comment) {
+        if (ends_with($comment['user']['html_url'], '/apps/' . env('GITHUB_APP_ALIAS'))) {
+          return $comment['id'];
+        }
       }
-    }
+      if ($paginator->hasNext()) {
+        $hasNext = true;
+        $comments = $paginator->fetchNext();
+      }
+    } while ($hasNext);
+
     return null;
   }
 }
